@@ -1,0 +1,68 @@
+trackr:
+  minversion: 1.0.0
+meta:
+  enabled: false
+  id: atb
+  title: АТБ-Маркет
+  description: АТБ-Маркет - найбільша українська мережа супермаркетів.
+  website: https://www.atbmarket.com/
+  image: https://www.atbmarket.com/images/svg/logo.svg
+  version: 1.0.0
+main:
+  location_data: ./atb.json
+  initialize:
+    attributes:
+      origin: "https://www.atbmarket.com"
+      headers:
+        Accept: "*/*"
+        Accept-Encoding: "gzip, deflate, br"
+        Accept-Language: "en-US,en;q=0.9,uk-UA;q=0.8,uk;q=0.7,ru;q=0.6"
+        Connection: "keep-alive"
+        Host: "api.multisearch.io"
+        Origin: "https://www.atbmarket.com"
+        Referer: "https://www.atbmarket.com/"
+        Sec-Fetch-Dest: "empty"
+        Sec-Fetch-Mode: "cors"
+        Sec-Fetch-Site: "cross-site"
+        User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+        sec-ch-ua: '"Google Chrome";v="119", "Chromium";v="119", "Not?A_Brand";v="24"'
+        sec-ch-ua-mobile: "?0"
+        sec-ch-ua-platform: '"Windows"'
+      params:
+        id: 11280
+        lang: "uk"
+        q: "dwpyha"
+        s: "medium"
+        uid: "a43d6530-8998-4b44-b689-d820cb97e729"
+  actions:
+    - action: update_attribute
+      args:
+        attribute: params
+        values:
+          - key: query
+            value: !dynamic type="attribute" value="$query"
+          - key: location
+            value: !dynamic type="attribute" value="$location"
+          - key: m
+            value: !dynamic type="computed" import="datetime" value="int(datetime.datetime.now().timestamp())"
+    - action: request
+      args:
+        save_to: response
+        url: https://api.multisearch.io/
+        method: GET
+        headers: !dynamic type="attribute" value="headers"
+        params: !dynamic type="attribute" value="params"
+    - action: chain_update
+      args:
+        attribute: response
+        updates:
+          - !dynamic type="computed" value="response['results']['item_groups']"
+          - !dynamic type="computed" value="[item for group in response for item in group['items']]"
+  results:
+    attribute: response
+    item_mapping:
+      name: !mapping item.name
+      image: !mapping item.picture
+      price: !mapping item.price
+      url: !mapping item.url
+      location: !dynamic type="attribute" value="location"
