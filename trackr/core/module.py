@@ -1,11 +1,17 @@
 import codecs, yaml, logging, pickle
+from typing import Any
 from pathlib import Path
 
 from trackr import VERSION
 
 from .location import LocationData
-from .utility import has_keys, error_exit
-from .constructors import DynamicConstructor, MappingConstructor
+from .utility import get_by_dot_path, has_keys, error_exit
+from .constructors import (
+    DynamicConstructor,
+    MappingConstructor,
+    compute_dynamic_attributes,
+)
+from .actions import Action
 
 
 yaml.SafeLoader.add_constructor("!dynamic", DynamicConstructor.from_yaml)
@@ -23,18 +29,29 @@ class SearchModule:
     _logger: logging.Logger = None
 
     attributes: dict = None
+    actions: list[Action] = None
     location_data: LocationData = None
 
-    def __init__(self, data: dict, file_path: str) -> None:
+    def __init__(
+        self, data: dict, file_path: str, is_compilation: bool = False
+    ) -> None:
         self._logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-
         self._data = data
-        self.attributes = {}
         self._file_path = file_path
+
+        self.attributes = {}
+        self.is_compilation = is_compilation
 
         self._load_sections()
         self._check_trackr_version()
         self._load_location_data()
+
+        self._load_attributes()
+        self._load_actions()
+        self._load_result_mapping()
+
+        if self.is_compilation:
+            self._prepare_compilation()
 
         if not self._meta_section.get("enabled", False):
             self._logger.info("Module is disabled, cannot proceed")
@@ -43,6 +60,35 @@ class SearchModule:
         self._logger.info(
             f'Created new instance for module: {self._meta_section["id"]} (v{self._meta_section["version"]})'
         )
+
+    # Loaders
+
+    def _load_attributes(self):
+        init_section = self._main_section.get("initialize", None)
+
+        self.attributes = init_section.get("attributes", {}) if init_section else {}
+
+    def _load_actions(self):
+        actions_section = self._main_section.get("actions", None)
+
+        if actions_section is None:
+            self._logger.warning("missing actions section")
+            return
+
+        self.actions = (
+            [Action(action) for action in actions_section] if actions_section else []
+        )
+
+    def _load_result_mapping(self):
+        result_mapping_section = self._main_section.get("result_mapping", None)
+
+        if result_mapping_section is None:
+            error_exit(self._logger, "missing result mapping section")
+
+        if not isinstance(result_mapping_section, dict):
+            error_exit(self._logger, "invalid result mapping section")
+
+        self.result_mapping = result_mapping_section
 
     def _load_sections(self):
         self._meta_section = self._data.get("meta", None)
@@ -83,12 +129,57 @@ class SearchModule:
 
         self._logger.debug(f" {self.location_data=}")
 
+    # Evaluation
+
+    def _execute_actions(self):
+        self._logger.info("Executing actions")
+
+        for action in self.actions:
+            action(self)
+
+    def _map_results(self) -> list[dict]:
+        result_attribute = self.result_mapping.get("attribute", None)
+        mapping = self.result_mapping.get("mapping", None)
+
+        if result_attribute is None:
+            error_exit(self._logger, "missing result attribute")
+
+        if mapping is None:
+            error_exit(self._logger, "missing result mapping")
+
+        return [
+            {
+                key: value(self, item=item)
+                for key, value in mapping.items()
+                if (
+                    isinstance(value, DynamicConstructor)
+                    or isinstance(value, MappingConstructor)
+                )
+            }
+            for item in get_by_dot_path(self.attributes, result_attribute, [])
+        ]
+
+    # Compilation
+
+    def _prepare_compilation(self):
+        self._logger.info("Preparing module for compilation")
+
+        self._logger.debug(" preparing attributes")
+        self._prepare_attributes_compilation()
+
+        self._logger.info("Module is ready for compilation")
+
+    def _prepare_attributes_compilation(self):
+        compute_dynamic_attributes(self, self.attributes, prepare=True)
+
+    # Misc
+
     def _check_trackr_version(self):
         if "minversion" not in self._trackr_section:
             error_exit(self._logger, "missing version parameter")
 
         trackr_version = tuple(
-            map(int, str(self._trackr_section['minversion']).split("."))
+            map(int, str(self._trackr_section["minversion"]).split("."))
         )
 
         if len(trackr_version) != 3:
@@ -100,12 +191,14 @@ class SearchModule:
                 f"module requires trackr v{self._trackr_section['minversion']} or higher",
             )
 
+    # Public
+
     @classmethod
-    def from_yaml(cls, file_path: str) -> "SearchModule":
+    def from_yaml(cls, file_path: str, **kwargs) -> "SearchModule":
         with codecs.open(file_path, "r", "utf-8") as file:
             data = yaml.safe_load(file)
 
-        return cls(data, file_path)
+        return cls(data, file_path, **kwargs)
 
     @classmethod
     def from_pickle(cls, file_path: str) -> "SearchModule":
@@ -116,5 +209,13 @@ class SearchModule:
             raise ValueError("invalid pickle file")
 
         obj._file_path = file_path
+        obj.eval()
 
         return obj
+
+    def search(self, query: str, location: Any) -> list[dict]:
+        self._logger.info(f"Searching for: {query} (location: {location})")
+        self.attributes.update({"$query": query, "$location": location})
+        self._execute_actions()
+
+        return self._map_results()

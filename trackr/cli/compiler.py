@@ -11,7 +11,7 @@ def compile_module(file_path: str,  output_path: str = None) -> None:
     logger.debug(f' {output_path=}')
 
     try:
-        module = SearchModule.from_yaml(file_path)
+        module = SearchModule.from_yaml(file_path, is_compilation=True)
     except Exception as e:
         logger.error(f'Failed to compile module: {file_path}')
         logger.exception(e)

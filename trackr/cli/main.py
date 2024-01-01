@@ -2,7 +2,6 @@ import argparse, logging
 
 
 from trackr import __version__, LOGGING_FORMAT
-from trackr.core.logging import configure_logger, set_logging_level
 
 
 logger = logging.getLogger(__name__)
@@ -43,12 +42,10 @@ def compile(args):
 
 
 def cli_main():
-    configure_logger()
-
     args = parse_args()
 
     if args.debug:
-        set_logging_level(logging.DEBUG)
+        logging.getLogger().setLevel(logging.DEBUG)
         logger.debug("Debug output enabled")
 
     if args.log:

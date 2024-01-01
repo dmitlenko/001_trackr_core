@@ -1,14 +1,20 @@
-from abc import abstractmethod, ABCMeta
+from abc import abstractmethod, ABC
 import re, importlib
 
+from .utility import get_by_dot_path
 
-class Constructor(metaclass=ABCMeta):
+
+class Constructor(ABC):
     @abstractmethod
     def from_yaml(cls, loader, node):
         pass
 
     @abstractmethod
-    def __call__(self, parent: object):
+    def __call__(self, parent: object, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def prepare(self, parent: object):
         pass
 
 
@@ -30,7 +36,7 @@ class DynamicConstructor(Constructor):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}<{self.type}>"
 
-    def __call__(self, parent: object):
+    def __call__(self, parent: object, *args, **kwargs):
         if self.type == "attribute":
             return self._get_attribute(parent)
         elif self.type == "computed":
@@ -39,12 +45,12 @@ class DynamicConstructor(Constructor):
             raise ValueError(f"invalid type parameter: {self.type}")
 
     def _get_attribute(self, parent: object):
-        return getattr(parent, "attributes", {}).get(self.value, None)
+        return get_by_dot_path(getattr(parent, "attributes", {}), self.value)
 
-    def _get_computed(self, parent: object):
+    def _prepare_computed(self, parent: object):
         parent_attributes: dict = getattr(parent, "attributes", {})
 
-        dependencies = {
+        self.dependencies = {
             dependency: parent_attributes[dependency]
             for dependency in [
                 d for d in self.parameters.pop("dependencies", "").split(",") if d
@@ -52,14 +58,19 @@ class DynamicConstructor(Constructor):
             if dependency in parent_attributes
         }
 
-        imports = {
+        self.imports = {
             import_: importlib.import_module(import_)
             for import_ in [
                 i for i in self.parameters.pop("import", "").split(",") if i
             ]
         }
 
-        return eval(self.value, imports, dependencies)
+    def _get_computed(self, parent: object):
+        return eval(self.value, self.imports, self.dependencies)
+
+    def prepare(self, parent: object):
+        if self.type == "computed":
+            self._prepare_computed(parent)
 
     @classmethod
     def from_yaml(cls, _, node):
@@ -68,19 +79,27 @@ class DynamicConstructor(Constructor):
         return cls({key: value for key, value in matches})
 
 
-def compute_dynamic_attributes(parent: object, root: dict | list) -> None:
+def compute_dynamic_attributes(parent: object, root: dict | list, prepare: bool = False) -> None:
     if isinstance(root, list):
         for item in root:
-            compute_dynamic_attributes(parent, item)
+            compute_dynamic_attributes(parent, item, prepare)
     elif isinstance(root, dict):
         for key, value in root.items():
             if isinstance(value, DynamicConstructor):
-                root[key] = value(parent)
+                if prepare:
+                    value.prepare(parent)
+                else:
+                    root[key] = value(parent)
             else:
-                compute_dynamic_attributes(parent, value)
+                compute_dynamic_attributes(parent, value, prepare)
 
 
 class MappingConstructor(Constructor):
+    def prepare(self, parent: object):
+        return super().prepare(parent)
+
+    def __call__(self, parent: object, item: dict, *args, **kwargs):
+        return super().__call__(parent, item, *args, **kwargs)
 
     @classmethod
     def from_yaml(cls, loader, node):
