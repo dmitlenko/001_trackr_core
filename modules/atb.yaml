@@ -39,12 +39,9 @@ main:
       args:
         attribute: params
         values:
-          - key: query
-            value: !dynamic type="attribute" value="$query"
-          - key: location
-            value: !dynamic type="attribute" value="$location"
-          - key: m
-            value: !dynamic type="computed" import="datetime" value="int(datetime.datetime.now().timestamp())"
+          query: !dynamic type="attribute" value="$query"
+          location: !dynamic type="attribute" value="$location"
+          m: !dynamic type="computed" import="datetime" value="int(datetime.datetime.now().timestamp())"
     - action: request
       args:
         save_to: response
