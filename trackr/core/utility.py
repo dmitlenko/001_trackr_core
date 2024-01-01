@@ -6,7 +6,7 @@ def has_keys(d: dict, keys: list) -> bool:
     return all(key in d for key in keys)
 
 
-def error_exit(logger=None, message='unknown error'):
+def error_exit(logger=None, message="unknown error"):
     if logger is None:
         logger = logging.getLogger()
 
@@ -38,7 +38,7 @@ def set_by_dot_path(d: dict, path: str, value: Any) -> None:
     d[keys[-1]] = value
 
 
-def get_by_dot_path(d: dict, path: str) -> Any:
+def get_by_dot_path(d: dict, path: str, default=None) -> Any:
     """Get a value in a dictionary by a dot path. Example:
     >>> d = {"a": {"b": {"c": 1}}}  # Create a dictionary
     >>> get_by_dot_path(d, "a.b.c")  # Get the value at a.b.c
@@ -56,7 +56,7 @@ def get_by_dot_path(d: dict, path: str) -> Any:
 
     for key in keys:
         if key not in d:
-            return None
+            return default
 
         d = d[key]
 

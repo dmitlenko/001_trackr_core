@@ -6,16 +6,12 @@ from .utility import set_by_dot_path, has_keys
 
 
 class Action:
-    _data: dict = None
-
     action: str = None
     args: dict = None
 
-    def __init__(self, data: dict) -> None:
-        self._data = data
-
-        self.action = self._data.pop("action", None)
-        self.args = self._data.pop("args", {})
+    def __init__(self, action: str, args: dict) -> None:
+        self.action = action
+        self.args = args
 
         if self.action is None:
             raise ValueError("missing action parameter")
@@ -37,7 +33,7 @@ class UpdateAttributeAction(Action):
             raise ValueError("parent must have attributes dict")
 
         attribute = self.args.get("attribute", None)
-        values = self.args.get("value", {})
+        values = self.args.get("values", {})
 
         if attribute is None:
             raise ValueError("missing attribute parameter")
@@ -45,10 +41,11 @@ class UpdateAttributeAction(Action):
         if values is None or not isinstance(values, dict):
             raise ValueError("invalid value parameter")
 
-        compute_dynamic_attributes(parent, values)
-
         for key, value in values.items():
-            set_by_dot_path(parent.attributes, key, value)
+            if isinstance(value, DynamicConstructor):
+                value = value(parent)
+
+            set_by_dot_path(parent.attributes[attribute], key, value)
 
 
 class RequestAction(Action):

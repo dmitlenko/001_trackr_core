@@ -53,13 +53,15 @@ main:
       args:
         attribute: response
         updates:
-          - !dynamic type="computed" value="response['results']['item_groups']"
-          - !dynamic type="computed" value="[item for group in response for item in group['items']]"
+          - !dynamic type="computed" value="response['results']['item_groups']" safe="False"
+          - !dynamic type="computed" value="[item for group in response for item in group['items']]" safe="False"
   result_mapping:
     attribute: response
     mapping:
-      name: !mapping item.name
-      image: !mapping item.picture
-      price: !mapping item.price
-      url: !mapping item.url
-      location: !dynamic type="attribute" value="location"
+      name: name
+      image: picture
+      price: price
+      url: url
+      location: !dynamic type="attribute" value="$location"
+      query: !dynamic type="attribute" value="$query"
+      store: !dynamic type="attribute" value="$module.id"

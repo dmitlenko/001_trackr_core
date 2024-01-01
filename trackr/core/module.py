@@ -7,15 +7,14 @@ from trackr import VERSION
 from .location import LocationData
 from .utility import get_by_dot_path, has_keys, error_exit
 from .constructors import (
+    Constructor,
     DynamicConstructor,
-    MappingConstructor,
     compute_dynamic_attributes,
 )
-from .actions import Action
+from .actions import Action, UpdateAttributeAction, RequestAction, ChainUpdateAction
 
 
 yaml.SafeLoader.add_constructor("!dynamic", DynamicConstructor.from_yaml)
-yaml.SafeLoader.add_constructor("!mapping", MappingConstructor.from_yaml)
 
 
 class SearchModule:
@@ -67,6 +66,7 @@ class SearchModule:
         init_section = self._main_section.get("initialize", None)
 
         self.attributes = init_section.get("attributes", {}) if init_section else {}
+        self.attributes.update({"$module": self._meta_section})
 
     def _load_actions(self):
         actions_section = self._main_section.get("actions", None)
@@ -75,9 +75,23 @@ class SearchModule:
             self._logger.warning("missing actions section")
             return
 
-        self.actions = (
-            [Action(action) for action in actions_section] if actions_section else []
-        )
+        self.actions = []
+
+        for action in actions_section:
+            if not isinstance(action, dict):
+                raise ValueError("Action must be a dictionary.")
+
+            action_type = action.get("action")
+            action_args = action.get("args", {})
+
+            if action_type == "update_attribute":
+                self.actions.append(UpdateAttributeAction(action_type, action_args))
+            elif action_type == "request":
+                self.actions.append(RequestAction(action_type, action_args))
+            elif action_type == "chain_update":
+                self.actions.append(ChainUpdateAction(action_type, action_args))
+            else:
+                raise ValueError(f"Invalid action type: {action_type}")
 
     def _load_result_mapping(self):
         result_mapping_section = self._main_section.get("result_mapping", None)
@@ -147,17 +161,20 @@ class SearchModule:
         if mapping is None:
             error_exit(self._logger, "missing result mapping")
 
-        return [
-            {
-                key: value(self, item=item)
-                for key, value in mapping.items()
-                if (
-                    isinstance(value, DynamicConstructor)
-                    or isinstance(value, MappingConstructor)
-                )
-            }
-            for item in get_by_dot_path(self.attributes, result_attribute, [])
-        ]
+        results = []
+
+        for item in get_by_dot_path(self.attributes, result_attribute):
+            result = {}
+
+            for key, value in mapping.items():
+                if isinstance(value, Constructor):
+                    result[key] = value(self)
+                else:
+                    result[key] = get_by_dot_path(item, value)
+
+            results.append(result)
+
+        return results
 
     # Compilation
 
