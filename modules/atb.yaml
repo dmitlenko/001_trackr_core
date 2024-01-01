@@ -1,7 +1,7 @@
 trackr:
   minversion: 1.0.0
 meta:
-  enabled: false
+  enabled: true
   id: atb
   title: АТБ-Маркет
   description: АТБ-Маркет - найбільша українська мережа супермаркетів.
