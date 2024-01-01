@@ -58,9 +58,9 @@ main:
         updates:
           - !dynamic type="computed" value="response['results']['item_groups']"
           - !dynamic type="computed" value="[item for group in response for item in group['items']]"
-  results:
+  result_mapping:
     attribute: response
-    item_mapping:
+    mapping:
       name: !mapping item.name
       image: !mapping item.picture
       price: !mapping item.price
