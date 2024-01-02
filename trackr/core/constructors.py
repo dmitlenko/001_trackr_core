@@ -57,6 +57,9 @@ class DynamicConstructor(Constructor):
         return get_by_dot_path(getattr(parent, "attributes", {}), self.value)
 
     def _prepare_computed(self, parent: object):
+        if self.prepared:
+            return
+
         parent_attributes: dict = getattr(parent, "attributes", {})
 
         deps = self.parameters.get("dependencies", [])
@@ -67,7 +70,9 @@ class DynamicConstructor(Constructor):
             raise ValueError("invalid dependencies parameter")
 
         self.dependencies = {
-            dependency: parent_attributes[dependency]
+            (
+                dependency[1:] if dependency.startswith("$") else dependency
+            ): parent_attributes[dependency]
             for dependency in [d for d in deps if d]
             if dependency in parent_attributes
         }
@@ -78,6 +83,10 @@ class DynamicConstructor(Constructor):
                 i for i in self.parameters.get("import", "").split(",") if i
             ]
         }
+
+        self.imports["utility"] = importlib.import_module(
+            ".core.utility.dynamic", "trackr"
+        )
 
         self.prepared = True
 
@@ -94,7 +103,7 @@ class DynamicConstructor(Constructor):
         if not self.prepared:
             self.prepare(parent)
 
-        return self._safe_execute(eval, self.value, self.imports, self.dependencies)
+        return self._safe_execute(eval, self.value, {**self.imports, **self.dependencies})
 
     def prepare(self, parent: object):
         if self.type == "computed":

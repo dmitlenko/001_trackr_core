@@ -168,6 +168,10 @@ class SearchModule:
 
             for key, value in mapping.items():
                 if isinstance(value, Constructor):
+                    if value.type == "computed":
+                        value.prepare(self)
+                        value.dependencies.update({"item": item})
+
                     result[key] = value(self)
                 else:
                     result[key] = get_by_dot_path(item, value)
@@ -226,7 +230,6 @@ class SearchModule:
             raise ValueError("invalid pickle file")
 
         obj._file_path = file_path
-        obj.eval()
 
         return obj
 

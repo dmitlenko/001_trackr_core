@@ -24,3 +24,4 @@ def compile_module(file_path: str,  output_path: str = None) -> None:
 
     with open(output_path, 'wb') as file:
         pickle.dump(module, file)
+        logger.info(f'Compiled module saved to: {output_path}')

@@ -1,0 +1,76 @@
+trackr:
+  minversion: 1.0.0
+meta:
+  enabled: true
+  id: atb
+  title: АТБ-Маркет
+  description: АТБ-Маркет - найбільша українська мережа супермаркетів.
+  website: https://www.atbmarket.com/
+  image: https://www.atbmarket.com/images/svg/logo.svg
+  version: 1.0.0
+main:
+  location_data: locations/metro.json
+  initialize:
+    attributes:
+      headers:
+        accept: "*/*"
+        accept-language: "en-US,en;q=0.9,uk-UA;q=0.8,uk;q=0.7,ru;q=0.6"
+        calltreeid: "0EE218D0-F734-4A27-BB8D-DD71F55AC34B||BTEX-770CDD36-BD5D-459D-AA01-E3307929F77F"
+        sec-ch-ua: '"Google Chrome";v="119", "Chromium";v="119", "Not?A_Brand";v="24"'
+        sec-ch-ua-mobile: "?0"
+        sec-ch-ua-platform: '"Windows"'
+        origin: "https://shop.metro.ua"
+        referer: "https://shop.metro.ua/"
+        sec-fetch-dest: "empty"
+        sec-fetch-mode: "same-origin"
+        sec-fetch-site: "same-origin"
+        x-sd-token: "lpdbfl9j"
+  actions:
+    - action: request
+      args:
+        save_to: response_ids
+        url: https://shop.metro.ua/searchdiscover/articlesearch/search
+        method: GET
+        headers: !dynamic type="attribute" value="headers"
+        params:
+          storeId: !dynamic type="attribute" value="$location"
+          query: !dynamic type="attribute" value="$query"
+          __t: !dynamic type="computed" import="datetime" value="int(datetime.datetime.now().timestamp())"
+          language: "uk-UA"
+          country: "UA"
+          rows: 24
+          page: 1
+          facets: true
+          categories: true
+    - action: chain_update
+      args:
+        attribute: response_ids
+        updates:
+          - !dynamic type="computed" value="response_ids['resultIds']" safe="False"
+    - action: request
+      args:
+        save_to: response
+        url: https://shop.metro.ua/evaluate.article.v1/betty-variants
+        method: GET
+        headers: !dynamic type="attribute" value="headers"
+        params:
+          storeIds: !dynamic type="attribute" value="$location"
+          ids: !dynamic type="attribute" value="response_ids"
+          __t: !dynamic type="computed" import="datetime" value="int(datetime.datetime.now().timestamp())"
+          country: "UA"
+          locale: "uk-UA"
+    - action: chain_update
+      args:
+        attribute: response
+        updates:
+          - !dynamic type="computed" value="utility.nested_dict_to_list(response, ['result', 'variants', 'bundles'])"
+  result_mapping:
+    attribute: response
+    mapping:
+      name: !dynamic type="computed" value="item['bundles']['description']"
+      image: !dynamic type="computed" value="item['bundles']['imageUrl']"
+      price: !dynamic type="computed" dependencies="$location" value="item['bundles']['stores'][location]['sellingPriceInfo']['finalPrice']"
+      url: !dynamic type="computed" value="f\"https://shop.metro.ua/shop/pv/{item['item_id']}/{item['variants_id']}/{item['bundles_id']}\" "
+      location: !dynamic type="attribute" value="$location"
+      query: !dynamic type="attribute" value="$query"
+      store: !dynamic type="attribute" value="$module.id"

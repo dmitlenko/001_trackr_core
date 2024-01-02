@@ -71,6 +71,9 @@ class RequestAction(Action):
         else:
             raise ValueError("Method must be GET or POST.")
 
+        if response.status_code != 200:
+            raise ValueError(f"Request failed with status code: {response.status_code}")
+
         if save_to is None:
             raise ValueError("Save_to must be specified.")
 

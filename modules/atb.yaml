@@ -9,7 +9,7 @@ meta:
   image: https://www.atbmarket.com/images/svg/logo.svg
   version: 1.0.0
 main:
-  location_data: ./atb.json
+  location_data: locations/atb.json
   initialize:
     attributes:
       origin: "https://www.atbmarket.com"
