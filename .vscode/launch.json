@@ -11,7 +11,8 @@
             "module": "trackr",
             "justMyCode": true,
             "args": [
-                "-d",
+                "-l",
+                "log.log"
             ]
         }
     ]

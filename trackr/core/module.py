@@ -154,6 +154,7 @@ class SearchModule:
     def _map_results(self) -> list[dict]:
         result_attribute = self.result_mapping.get("attribute", None)
         mapping = self.result_mapping.get("mapping", None)
+        variable_name = self.result_mapping.get("variable_name", "item")
 
         if result_attribute is None:
             error_exit(self._logger, "missing result attribute")
@@ -170,7 +171,7 @@ class SearchModule:
                 if isinstance(value, Constructor):
                     if value.type == "computed":
                         value.prepare(self)
-                        value.dependencies.update({"item": item})
+                        value.dependencies.update({variable_name: item})
 
                     result[key] = value(self)
                 else:

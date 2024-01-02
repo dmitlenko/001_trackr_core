@@ -22,8 +22,8 @@ class Constructor(ABC):
 
     @classmethod
     def from_yaml(cls, _, node):
-        matches = re.compile(r'(\w+)="(.*?)"').findall(node.value)
-        parameters = {key: value for key, value in matches}
+        matches = re.compile(r'(\w+)="((?:[^"\\]|\\.)*)"').findall(node.value)
+        parameters = {key: value.replace('\\"', '"') for key, value in matches}
 
         return cls(parameters.get("type"), parameters.get("value"), parameters)
 
@@ -84,7 +84,8 @@ class DynamicConstructor(Constructor):
             ]
         }
 
-        self.imports["utility"] = importlib.import_module(
+        # add dynamic utility functions to imports
+        self.imports["__"] = importlib.import_module(
             ".core.utility.dynamic", "trackr"
         )
 

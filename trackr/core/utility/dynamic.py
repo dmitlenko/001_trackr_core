@@ -1,16 +1,13 @@
+import json
 
 
-def nested_dict_to_list(d: dict, keys: list) -> list[dict]:
-    result = []
+def dict_items(d: dict, key: str = "", prefix: str = "") -> list[dict]:
+    if key:
+        d = d[key]
 
-    if len(keys) == 1:
-        for key, value in d.items():
-            result.append({keys[0] + "_id": key, keys[0]: value})
-    else:
-        for key, value in d.items():
-            for item in nested_dict_to_list(value, keys[1:]):
-                item[keys[0] + "_id"] = key
-                item[keys[0]] = value
-                result.append(item)
+    return [{f"{prefix}_key": k, prefix: v} for k, v in d.items()]
 
-    return result
+
+def save_to_file(d: dict, file_path: str):
+    with open(file_path, "w") as file:
+        file.write(json.dumps(d, indent=4))

@@ -2,11 +2,11 @@ trackr:
   minversion: 1.0.0
 meta:
   enabled: true
-  id: atb
-  title: АТБ-Маркет
-  description: АТБ-Маркет - найбільша українська мережа супермаркетів.
-  website: https://www.atbmarket.com/
-  image: https://www.atbmarket.com/images/svg/logo.svg
+  id: metro
+  title: Метро
+  description: METRO Cash and Carry - міжнародна торговельна компанія, що спеціалізується на обслуговуванні HoReCa та приватних підприємців.
+  website: https://www.metro.ua/
+  image: https://cdn.metro-online.com/-/media/Project/MCW/shared/Bucket-Header/METRO.svg
   version: 1.0.0
 main:
   location_data: locations/metro.json
@@ -63,14 +63,19 @@ main:
       args:
         attribute: response
         updates:
-          - !dynamic type="computed" value="utility.nested_dict_to_list(response, ['result', 'variants', 'bundles'])"
+          - !dynamic type="computed" value="[value for value in response.get('result', {}).values()]"
+          - !dynamic type="computed" value="[list(value.get('variants', {}).values()) for value in response]"
+          - !dynamic type="computed" value="[item for sublist in response for item in sublist]"
+          - !dynamic type="computed" value="[list(value.get('bundles', {}).values()) for value in response]"
+          - !dynamic type="computed" value="[item for sublist in response for item in sublist]"
   result_mapping:
     attribute: response
+    variable_name: bundle
     mapping:
-      name: !dynamic type="computed" value="item['bundles']['description']"
-      image: !dynamic type="computed" value="item['bundles']['imageUrl']"
-      price: !dynamic type="computed" dependencies="$location" value="item['bundles']['stores'][location]['sellingPriceInfo']['finalPrice']"
-      url: !dynamic type="computed" value="f\"https://shop.metro.ua/shop/pv/{item['item_id']}/{item['variants_id']}/{item['bundles_id']}\" "
+      name: !dynamic type="computed" value="bundle['description']"
+      image: !dynamic type="computed" value="bundle['imageUrl']"
+      price: !dynamic type="computed" dependencies="$location" value="bundle['stores'][location]['sellingPriceInfo']['finalPrice']"
+      url: !dynamic type="computed" value="f\"https://shop.metro.ua/shop/pv/{bundle['bundleId']['articleNumber']}/{bundle['bundleId']['variantNumber']}/{bundle['bundleId']['bundleNumber']}/\""
       location: !dynamic type="attribute" value="$location"
       query: !dynamic type="attribute" value="$query"
       store: !dynamic type="attribute" value="$module.id"
