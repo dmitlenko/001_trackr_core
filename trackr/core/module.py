@@ -63,12 +63,18 @@ class SearchModule:
     # Loaders
 
     def _load_attributes(self):
+        self._logger.debug("Loading attributes")
+
         init_section = self._main_section.get("initialize", None)
 
         self.attributes = init_section.get("attributes", {}) if init_section else {}
         self.attributes.update({"$module": self._meta_section})
 
+        self._logger.debug(f" attributes={list(self.attributes.keys())}")
+
     def _load_actions(self):
+        self._logger.debug("Loading actions")
+
         actions_section = self._main_section.get("actions", None)
 
         if actions_section is None:
@@ -93,7 +99,12 @@ class SearchModule:
             else:
                 raise ValueError(f"Invalid action type: {action_type}")
 
+            self._logger.debug(f" loaded action: {action_type}")
+
+        self._logger.debug(f" actions={self.actions}")
+
     def _load_result_mapping(self):
+        self._logger.debug("Loading result mapping")
         result_mapping_section = self._main_section.get("result_mapping", None)
 
         if result_mapping_section is None:
@@ -104,7 +115,11 @@ class SearchModule:
 
         self.result_mapping = result_mapping_section
 
+        self._logger.debug(f" result_mapping={self.result_mapping}")
+
     def _load_sections(self):
+        self._logger.debug("Loading sections")
+
         self._meta_section = self._data.get("meta", None)
         self._main_section = self._data.get("main", None)
         self._trackr_section = self._data.get("trackr", None)
@@ -121,7 +136,13 @@ class SearchModule:
         if not has_keys(self._meta_section, ["id", "enabled", "version"]):
             error_exit(self._logger, "missing required meta section keys")
 
+        self._logger.debug(f" meta={self._meta_section.keys()}")
+        self._logger.debug(f" main={self._main_section.keys()}")
+        self._logger.debug(f" trackr={self._trackr_section.keys()}")
+
     def _load_location_data(self):
+        self._logger.debug("Loading location data")
+
         if (location_data := self._main_section.get("location_data", None)) is None:
             logging.warning("missing location data section")
             return
@@ -141,7 +162,7 @@ class SearchModule:
         else:
             error_exit(self._logger, "invalid location data section")
 
-        self._logger.debug(f" {self.location_data=}")
+        self._logger.debug(f" location_data={self.location_data}")
 
     # Evaluation
 
@@ -152,6 +173,8 @@ class SearchModule:
             action(self)
 
     def _map_results(self) -> list[dict]:
+        self._logger.debug("Mapping results")
+
         result_attribute = self.result_mapping.get("attribute", None)
         mapping = self.result_mapping.get("mapping", None)
         variable_name = self.result_mapping.get("variable_name", "item")
@@ -178,6 +201,8 @@ class SearchModule:
                     result[key] = get_by_dot_path(item, value)
 
             results.append(result)
+
+        self._logger.debug(f" mapped {len(results)} results")
 
         return results
 

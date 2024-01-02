@@ -65,9 +65,9 @@ main:
         updates:
           - !dynamic type="computed" value="[value for value in response.get('result', {}).values()]"
           - !dynamic type="computed" value="[list(value.get('variants', {}).values()) for value in response]"
-          - !dynamic type="computed" value="[item for sublist in response for item in sublist]"
+          - !dynamic type="computed" value="__.Array.flatten(response)"
           - !dynamic type="computed" value="[list(value.get('bundles', {}).values()) for value in response]"
-          - !dynamic type="computed" value="[item for sublist in response for item in sublist]"
+          - !dynamic type="computed" value="__.Array.flatten(response)"
   result_mapping:
     attribute: response
     variable_name: bundle

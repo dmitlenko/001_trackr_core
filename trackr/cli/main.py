@@ -26,6 +26,7 @@ def parse_args():
         "-d", "--debug", action="store_true", help="enable debug output"
     )
     parser.add_argument("-l", "--log", type=str, help="path to log file")
+    parser.add_argument("-q", "--quiet", action="store_true", help="disable output")
 
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser(
@@ -52,6 +53,9 @@ def cli_main():
         handler = logging.FileHandler(args.log)
         handler.setFormatter(logging.Formatter(LOGGING_FORMAT))
         logging.getLogger().addHandler(handler)
+
+    if args.quiet:
+        logging.getLogger().setLevel(logging.ERROR)
 
     if args.command == "compile":
         compile(args)

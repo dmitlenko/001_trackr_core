@@ -3,7 +3,7 @@ import re, importlib
 from typing import Callable
 
 
-from .utility import get_by_dot_path
+from .utility import get_by_dot_path, dynamic
 
 
 class Constructor(ABC):
@@ -85,9 +85,7 @@ class DynamicConstructor(Constructor):
         }
 
         # add dynamic utility functions to imports
-        self.imports["__"] = importlib.import_module(
-            ".core.utility.dynamic", "trackr"
-        )
+        self.imports["__"] = dynamic
 
         self.prepared = True
 
