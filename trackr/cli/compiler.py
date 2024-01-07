@@ -1,6 +1,7 @@
 import logging, pickle
 
 from trackr.core.module import SearchModule
+from trackr import MODULE_FILE_EXTENSION
 
 
 logger = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ def compile_module(file_path: str,  output_path: str = None) -> None:
         return
 
     if output_path is None:
-        output_path = f'{file_path.split(".", 1)[0]}.compiledmodule'
+        output_path = f'{file_path}{MODULE_FILE_EXTENSION}'
 
         logger.info(f'No output path was specified, using default: {output_path}')
 
